@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .venv/
 
+# secrets — never commit real values (.env.example is committed as a template)
+.env
+
 # runtime / generated
 logs/
 xberg-cache/
