@@ -1,0 +1,14 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# runtime / generated
+logs/
+xberg-cache/
+*.b64
+setup_docintel.sh
+
+# os
+.DS_Store
+Thumbs.db

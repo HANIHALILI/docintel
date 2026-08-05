@@ -1,0 +1,58 @@
+services:
+  mock-vlm:
+    build: ./mock-vlm
+    container_name: mock-vlm
+    ports:
+      - "9090:9090" # exposed to the host only for convenience/inspection
+    volumes:
+      - ./logs:/logs
+
+  xberg:
+    # Official XBERG image; API server mode is the default entrypoint
+    # (`xberg serve --host 0.0.0.0 --port 8000`).
+    # Pin a tag (e.g. ghcr.io/xberg-io/xberg:v1.0.0-rc.29) for reproducibility.
+    image: ghcr.io/xberg-io/xberg:latest
+    container_name: xberg-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mock-vlm
+
+  # Single-image service with the `captioning` feature (built on the Linux
+  # Python wheel): text/scans -> Tesseract locally, embedded images -> VLM
+  # captions. One call does everything.
+  xberg-captioning:
+    build: ./xberg-service
+    container_name: xberg-captioning
+    ports:
+      - "8080:8080"
+    environment:
+      - VLM_MODEL=openai/gpt-4o-mini
+      # For the POC these point at the mock; for production delete VLM_BASE_URL
+      # + VLM_API_KEY and set OPENAI_API_KEY (or ANTHROPIC_API_KEY) instead.
+      - VLM_BASE_URL=http://mock-vlm:9090/v1
+      - VLM_API_KEY=mock-key-not-checked
+      - OCR_LANGUAGE=eng
+    volumes:
+      - ./xberg-cache:/cache
+    depends_on:
+      - mock-vlm
+
+  # The real service we're building. Phase 1: fast parse lane + async VLM lane.
+  # For the POC the VLM points at the mock; for production drop VLM_BASE_URL +
+  # VLM_API_KEY and set OPENAI_API_KEY (or ANTHROPIC_API_KEY) instead.
+  docintel:
+    build: ./docintel
+    container_name: docintel
+    ports:
+      - "8090:8090"
+    environment:
+      - VLM_MODEL=openai/gpt-4o-mini
+      - VLM_BASE_URL=http://mock-vlm:9090/v1
+      - VLM_API_KEY=mock-key-not-checked
+      - VLM_CONCURRENCY=8
+      - VLM_MIN_PIXEL_AREA=1000
+    volumes:
+      - ./xberg-cache:/cache
+    depends_on:
+      - mock-vlm
