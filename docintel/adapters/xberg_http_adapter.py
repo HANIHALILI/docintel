@@ -18,11 +18,9 @@ import json
 
 import httpx
 
-from ..models import BBox, ParseResult, VisualItem, VisualKind
+from ..models import BBox, ParseResult, VisualItem
+from ._xberg_common import map_image_kind
 from .base import ParseError
-
-# xberg ImageKind values (lowercased) we treat as figures rather than plain images.
-_FIGURE_KINDS = {"chart", "diagram", "drawing"}
 
 
 def _http_parse_config() -> dict:
@@ -53,8 +51,7 @@ def _to_visual(img: dict) -> VisualItem | None:
         return None
 
     fmt = (img.get("format") or "png").lower()
-    kind_raw = (img.get("image_kind") or "").lower()
-    kind = VisualKind.FIGURE if kind_raw in _FIGURE_KINDS else VisualKind.EMBEDDED
+    kind = map_image_kind(img.get("image_kind"))
 
     bb = img.get("bounding_box")
     bbox = None

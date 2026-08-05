@@ -12,16 +12,9 @@ from __future__ import annotations
 
 import xberg
 
-from ..models import BBox, ParseResult, VisualItem, VisualKind
+from ..models import BBox, ParseResult, VisualItem
+from ._xberg_common import map_image_kind
 from .base import ParseError
-
-# Map xberg's image_kind strings onto our kinds. Unknown values fall back safely.
-_KIND_MAP = {
-    "embedded": VisualKind.EMBEDDED,
-    "figure": VisualKind.FIGURE,
-    "pageraster": VisualKind.PAGE,
-    "page_raster": VisualKind.PAGE,
-}
 
 
 def _fast_parse_config() -> dict:
@@ -78,7 +71,7 @@ def _to_visual(img) -> VisualItem | None:
     if not data:
         return None
     fmt = (getattr(img, "format", None) or "png").lower()
-    kind = _KIND_MAP.get(str(getattr(img, "image_kind", "") or "").lower(), VisualKind.EMBEDDED)
+    kind = map_image_kind(getattr(img, "image_kind", None))
     return VisualItem(
         data=data,
         mime=f"image/{'jpeg' if fmt in ('jpg', 'jpeg') else fmt}",
