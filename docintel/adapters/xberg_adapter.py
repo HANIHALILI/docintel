@@ -10,9 +10,6 @@ VLM is OFF here by construction (the async VLM lane owns all model calls).
 
 from __future__ import annotations
 
-import os
-import tempfile
-
 import xberg
 
 from ..models import BBox, ParseResult, VisualItem, VisualKind
@@ -106,16 +103,19 @@ class XbergAdapter:
         return True
 
     async def parse(self, data: bytes, mime: str, filename: str | None = None) -> ParseResult:
-        suffix = os.path.splitext(filename or "")[1] or _suffix_for_mime(mime)
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(data)
-            path = tmp.name
+        # Feed the bytes straight into xberg — no temp file. A weak/oct-stream
+        # mime is dropped so xberg falls back to filename-based detection.
+        mime_hint = mime if mime and mime != "application/octet-stream" else None
+        inp = xberg.ExtractInput(
+            kind="bytes",
+            bytes=data,
+            mime_type=mime_hint,
+            filename=filename,
+        )
         try:
-            result = await xberg.extract(path, _fast_parse_config())
+            result = await xberg.extract(inp, _fast_parse_config())
         except Exception as exc:  # normalize engine errors to our type
             raise ParseError(f"xberg extraction failed: {exc}") from exc
-        finally:
-            os.unlink(path)
 
         docs = list(getattr(result, "results", None) or [])
         if not docs:
@@ -139,14 +139,3 @@ class XbergAdapter:
             warnings=[str(w) for w in (getattr(doc, "processing_warnings", None) or [])],
             metadata={"xberg_image_count": len(images)},
         )
-
-
-def _suffix_for_mime(mime: str) -> str:
-    return {
-        "application/pdf": ".pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
-        "text/html": ".html",
-        "image/png": ".png",
-        "image/jpeg": ".jpg",
-    }.get(mime, ".bin")
