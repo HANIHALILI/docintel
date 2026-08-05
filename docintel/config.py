@@ -32,19 +32,22 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        # NB: with slots=True, class-level `cls.field` is a slot descriptor, not
+        # the default value — so read defaults from a fresh instance instead.
+        d = cls()
         base_url = os.environ.get("VLM_BASE_URL") or None
         api_key = os.environ.get("VLM_API_KEY") or None
         enabled = _env_bool("VLM_ENABLED", default=bool(base_url or api_key))
         return cls(
-            vlm_model=os.environ.get("VLM_MODEL", cls.vlm_model),
+            vlm_model=os.environ.get("VLM_MODEL", d.vlm_model),
             vlm_base_url=base_url,
             vlm_api_key=api_key,
             vlm_enabled=enabled,
-            concurrency=int(os.environ.get("VLM_CONCURRENCY", cls.concurrency)),
-            min_pixel_area=int(os.environ.get("VLM_MIN_PIXEL_AREA", cls.min_pixel_area)),
-            request_timeout=float(os.environ.get("VLM_TIMEOUT", cls.request_timeout)),
-            max_retries=int(os.environ.get("VLM_MAX_RETRIES", cls.max_retries)),
-            prompt=os.environ.get("VLM_PROMPT", cls.prompt),
+            concurrency=int(os.environ.get("VLM_CONCURRENCY", d.concurrency)),
+            min_pixel_area=int(os.environ.get("VLM_MIN_PIXEL_AREA", d.min_pixel_area)),
+            request_timeout=float(os.environ.get("VLM_TIMEOUT", d.request_timeout)),
+            max_retries=int(os.environ.get("VLM_MAX_RETRIES", d.max_retries)),
+            prompt=os.environ.get("VLM_PROMPT", d.prompt),
         )
 
 
