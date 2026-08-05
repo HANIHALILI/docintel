@@ -15,6 +15,7 @@ from .adapters import ParseError, build_adapter
 from .config import Settings
 from .models import ParseResult, VisualItem
 from .vlm import Describer
+from .weave import weave_descriptions
 
 app = FastAPI(title="docintel", version=__version__)
 
@@ -38,23 +39,6 @@ def _serialize_visual(v: VisualItem) -> dict:
         "cluster_id": v.cluster_id,
         "description": v.description,
     }
-
-
-def _weave_descriptions(result: ParseResult) -> str:
-    """Append visual descriptions after the text so downstream RAG sees them.
-
-    Phase 1 keeps this simple: a labelled block per described visual, appended to
-    the document text. Positional in-line weaving (right after each image anchor)
-    is a Phase 2 refinement once we track anchor offsets.
-    """
-    described = [v for v in result.visuals if v.description]
-    if not described:
-        return result.text
-    lines = [result.text.rstrip(), "", "<!-- image descriptions -->"]
-    for v in described:
-        loc = f"page {v.page}" if v.page is not None else "document"
-        lines.append(f"![{v.kind.value} — {loc}] {v.description}")
-    return "\n".join(lines)
 
 
 def _serialize(result: ParseResult, woven_text: str, stats) -> dict:
@@ -115,5 +99,5 @@ async def extract(
     if describe is not False:
         stats = await _describer.run(result.visuals)
 
-    woven = _weave_descriptions(result)
+    woven = weave_descriptions(result.text, result.visuals)
     return _serialize(result, woven, stats)
