@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from .adapters import XbergAdapter
+from .adapters import build_adapter
 from .config import Settings
 from .models import VisualItem, VisualKind
 from .vlm import Describer
@@ -25,12 +25,15 @@ async def main(path: str) -> int:
     with open(path, "rb") as fh:
         data = fh.read()
 
-    result = await XbergAdapter().parse(data, mime="application/octet-stream", filename=path)
+    settings = Settings.from_env()
+    adapter = build_adapter(settings)
+    print(f"parser_backend={settings.parser_backend}  adapter={adapter.name}")
+
+    result = await adapter.parse(data, mime="application/octet-stream", filename=path)
     print(f"engine={result.engine}  text={len(result.text)} chars  images={len(result.images)}")
     assert result.text.strip(), "expected non-empty text"
     assert result.images, "expected at least one embedded image"
 
-    settings = Settings.from_env()
     if not settings.vlm_enabled:
         print("\nVLM disabled (no VLM_BASE_URL/VLM_API_KEY set) — set them to test the VLM lane.")
         print("PASS (parse-only path).")

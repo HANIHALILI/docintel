@@ -1,6 +1,9 @@
---pre
-xberg==1.0.0rc29
+# Thin service image: HTTP backend needs only these.
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 httpx>=0.27
+
+# The in-process backend (PARSER_BACKEND=inprocess) additionally needs the xberg
+# wheel — not installed here to keep the image thin. For local in-process runs:
+#   pip install --pre "xberg>=1.0.14"

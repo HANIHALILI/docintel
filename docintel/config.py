@@ -18,6 +18,9 @@ _DEFAULT_PROMPT = (
 
 @dataclass(slots=True)
 class Settings:
+    # --- parser backend ---
+    parser_backend: str = "inprocess"        # "inprocess" (xberg wheel) | "http" (xberg container)
+    xberg_url: str | None = None             # required for http backend, e.g. http://xberg:8000
     # --- VLM endpoint (OpenAI-compatible) ---
     vlm_model: str = "openai/gpt-4o-mini"
     vlm_base_url: str | None = None          # e.g. http://mock-vlm:9090/v1
@@ -39,6 +42,8 @@ class Settings:
         api_key = os.environ.get("VLM_API_KEY") or None
         enabled = _env_bool("VLM_ENABLED", default=bool(base_url or api_key))
         return cls(
+            parser_backend=os.environ.get("PARSER_BACKEND", d.parser_backend),
+            xberg_url=os.environ.get("XBERG_URL") or None,
             vlm_model=os.environ.get("VLM_MODEL", d.vlm_model),
             vlm_base_url=base_url,
             vlm_api_key=api_key,

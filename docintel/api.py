@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from . import __version__
-from .adapters import ParseError, XbergAdapter
+from .adapters import ParseError, build_adapter
 from .config import Settings
 from .models import ParseResult, VisualItem
 from .vlm import Describer
@@ -19,8 +19,8 @@ from .vlm import Describer
 app = FastAPI(title="docintel", version=__version__)
 
 _settings = Settings.from_env()
-_adapter = XbergAdapter()          # Phase 3 replaces this with a dispatcher
-_describer = Describer(_settings)   # holds the cross-request VLM cache
+_adapter = build_adapter(_settings)  # inprocess (wheel) or http (container), per env
+_describer = Describer(_settings)     # holds the cross-request VLM cache
 
 
 def _serialize_visual(v: VisualItem) -> dict:
@@ -86,6 +86,7 @@ def health() -> dict:
         "status": "ok",
         "service": "docintel",
         "version": __version__,
+        "parser_backend": _settings.parser_backend,
         "adapter": _adapter.name,
         "vlm_enabled": _settings.vlm_enabled,
         "vlm_model": _settings.vlm_model if _settings.vlm_enabled else None,
