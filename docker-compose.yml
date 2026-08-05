@@ -18,26 +18,6 @@ services:
     volumes:
       - ./xberg-cache:/cache
 
-  # Single-image service with the `captioning` feature (built on the Linux
-  # Python wheel): text/scans -> Tesseract locally, embedded images -> VLM
-  # captions. One call does everything.
-  xberg-captioning:
-    build: ./xberg-service
-    container_name: xberg-captioning
-    ports:
-      - "8080:8080"
-    environment:
-      - VLM_MODEL=openai/gpt-4o-mini
-      # For the POC these point at the mock; for production delete VLM_BASE_URL
-      # + VLM_API_KEY and set OPENAI_API_KEY (or ANTHROPIC_API_KEY) instead.
-      - VLM_BASE_URL=http://mock-vlm:9090/v1
-      - VLM_API_KEY=mock-key-not-checked
-      - OCR_LANGUAGE=eng
-    volumes:
-      - ./xberg-cache:/cache
-    depends_on:
-      - mock-vlm
-
   # The real service we're building. Fast parse (via the xberg container over
   # HTTP) + async VLM lane (via the mock). For production drop VLM_BASE_URL +
   # VLM_API_KEY and set OPENAI_API_KEY (or ANTHROPIC_API_KEY) instead.
