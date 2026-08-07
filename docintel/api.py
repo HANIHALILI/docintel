@@ -44,12 +44,13 @@ def _serialize_visual(v: VisualItem) -> dict:
     }
 
 
-def _serialize(result: ParseResult, woven_text: str, stats, image_mode: str) -> dict:
+def _serialize(result: ParseResult, woven_text: str, stats, image_mode: str, ocr_language: str | None) -> dict:
     return {
         "engine": result.engine,
         "extraction_method": result.extraction_method,
         "mime_type": result.mime_type,
         "image_mode": image_mode,
+        "ocr_language": ocr_language,
         "text": woven_text,
         "images": [_serialize_visual(v) for v in result.images],
         "regions": [_serialize_visual(v) for v in result.regions],
@@ -87,7 +88,8 @@ def health() -> dict:
 @app.post("/extract")
 async def extract(
     file: UploadFile = File(...),
-    image_mode: str | None = Form(None),  # per-request override: "vlm" | "ocr" (default: server setting)
+    image_mode: str | None = Form(None),     # per-request override: "vlm" | "ocr"
+    ocr_language: str | None = Form(None),   # per-request OCR language, e.g. "heb+eng" (ocr mode only)
 ) -> dict:
     data = await file.read()
     if not data:
@@ -103,7 +105,7 @@ async def extract(
     options = ParseOptions(
         ocr_images=(mode == "ocr"),
         ocr_backend=_settings.ocr_backend,
-        ocr_language=_settings.ocr_language,
+        ocr_language=(ocr_language or _settings.ocr_language),  # per-request override
     )
     try:
         result = await _adapter.parse(data, mime, file.filename, options)
@@ -116,4 +118,4 @@ async def extract(
         stats = await _describer.run(result.visuals)
 
     woven = weave_descriptions(result.text, result.visuals)
-    return _serialize(result, woven, stats, mode)
+    return _serialize(result, woven, stats, mode, options.ocr_language if mode == "ocr" else None)
