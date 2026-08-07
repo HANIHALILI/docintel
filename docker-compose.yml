@@ -7,11 +7,11 @@ services:
     volumes:
       - ./logs:/logs
 
-  # Official XBERG image as a standalone extraction server. docintel calls it
-  # over HTTP (fast extraction only — no captioning; our describer owns the VLM).
-  # Default entrypoint: `xberg serve --host 0.0.0.0 --port 8000`.
+  # XBERG extraction server (official 1.0.14 + Hebrew Tesseract data — see
+  # xberg-image/). docintel calls it over HTTP. Default entrypoint:
+  # `xberg serve --host 0.0.0.0 --port 8000`.
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14
+    build: ./xberg-image
     container_name: xberg
     ports:
       - "8000:8000"   # exposed to host for convenience/inspection
@@ -29,6 +29,11 @@ services:
     environment:
       - PARSER_BACKEND=http
       - XBERG_URL=http://xberg:8000
+      # image processing: "vlm" (describe) or "ocr" (read text). Override per
+      # request with the `image_mode` form field.
+      - IMAGE_MODE=vlm
+      - OCR_BACKEND=tesseract
+      - OCR_LANGUAGE=heb+eng
       - VLM_MODEL=openai/gpt-4o-mini
       - VLM_BASE_URL=http://mock-vlm:9090/v1
       - VLM_API_KEY=mock-key-not-checked

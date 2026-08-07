@@ -19,22 +19,22 @@ import json
 import httpx
 
 from ..models import BBox, ParseResult, VisualItem
-from ._xberg_common import map_image_kind
-from .base import ParseError
+from ._xberg_common import apply_ocr_to_config, extract_ocr_text, map_image_kind
+from .base import ParseError, ParseOptions
 
 
-def _http_parse_config() -> dict:
-    return {
+def _http_parse_config(options: ParseOptions | None) -> dict:
+    cfg = {
         "use_cache": False,
         "images": {
             "extract_images": True,
-            "run_ocr_on_images": False,
             "inject_placeholders": True,
             "include_data_base64": True,   # <-- image bytes returned as base64 over HTTP
         },
         "pdf_options": {"extract_images": True},
-        "ocr": {"enabled": False},
     }
+    apply_ocr_to_config(cfg, options)   # sets images.run_ocr_on_images + ocr.*
+    return cfg
 
 
 def _to_visual(img: dict) -> VisualItem | None:
@@ -68,6 +68,7 @@ def _to_visual(img: dict) -> VisualItem | None:
         height=img.get("height"),
         bbox=bbox,
         cluster_id=str(img["cluster_id"]) if img.get("cluster_id") is not None else None,
+        ocr_text=extract_ocr_text(img.get("ocr_result")),
     )
 
 
@@ -83,9 +84,11 @@ class XbergHttpAdapter:
     def supports(self, mime: str, filename: str | None) -> bool:
         return True
 
-    async def parse(self, data: bytes, mime: str, filename: str | None = None) -> ParseResult:
+    async def parse(
+        self, data: bytes, mime: str, filename: str | None = None, options: ParseOptions | None = None
+    ) -> ParseResult:
         files = {"file": (filename or "upload.bin", data, mime or "application/octet-stream")}
-        form = {"config": json.dumps(_http_parse_config())}
+        form = {"config": json.dumps(_http_parse_config(options))}
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             try:
                 resp = await client.post(self._url, files=files, data=form)

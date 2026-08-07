@@ -24,7 +24,8 @@ _ANCHOR_RE = re.compile(r"!\[[^\]]*\]\(embedded:[^)]*\)|\[Image:[^\]]*\]")
 
 
 def weave_descriptions(text: str, visuals: list[VisualItem]) -> str:
-    described = [v for v in visuals if v.description and v.description.strip()]
+    # `derived_text` is the OCR text or the VLM description, whichever mode ran.
+    described = [v for v in visuals if v.derived_text and v.derived_text.strip()]
     if not described:
         return text
 
@@ -40,7 +41,7 @@ def _insert_at_anchors(text: str, anchors: list[re.Match], described: list[Visua
     last = 0
     for anchor, v in zip(anchors, described):
         out.append(text[last : anchor.end()])
-        out.append(f"\n{v.description.strip()}")
+        out.append(f"\n{v.derived_text.strip()}")
         last = anchor.end()
     out.append(text[last:])
     return "".join(out)
@@ -51,5 +52,5 @@ def _append_block(text: str, described: list[VisualItem]) -> str:
     lines = [text.rstrip(), "", "<!-- image descriptions -->"]
     for v in described:
         loc = f"page {v.page}" if v.page is not None else "document"
-        lines.append(f"![{v.kind.value} — {loc}] {v.description.strip()}")
+        lines.append(f"![{v.kind.value} — {loc}] {v.derived_text.strip()}")
     return "\n".join(lines)

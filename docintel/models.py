@@ -55,8 +55,16 @@ class VisualItem:
     height: int | None = None
     bbox: BBox | None = None
     cluster_id: str | None = None   # groups tiles that form one logical figure
-    # Filled by the VLM lane; None until then.
+    # Text derived from the image. Exactly one is filled, depending on image mode:
+    #   description — from the VLM lane (what the image shows)
+    #   ocr_text    — from the OCR backend (the literal text in the image)
     description: str | None = None
+    ocr_text: str | None = None
+
+    @property
+    def derived_text(self) -> str | None:
+        """The text produced for this image, whichever mode ran (OCR or VLM)."""
+        return self.ocr_text or self.description
 
     @property
     def sha256(self) -> str:

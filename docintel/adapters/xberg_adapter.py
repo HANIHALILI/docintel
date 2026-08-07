@@ -13,28 +13,27 @@ from __future__ import annotations
 import xberg
 
 from ..models import BBox, ParseResult, VisualItem
-from ._xberg_common import map_image_kind
-from .base import ParseError
+from ._xberg_common import apply_ocr_to_config, extract_ocr_text, map_image_kind
+from .base import ParseError, ParseOptions
 
 
-def _fast_parse_config() -> dict:
-    """Config for pure extraction: pull text + images, run NO VLM and NO page OCR.
+def _fast_parse_config(options: ParseOptions | None) -> dict:
+    """Config for extraction: pull text + images; OCR toggled by `options`.
 
-    Kept as a dict on purpose. Across xberg release-candidates field names have
-    churned; a dict degrades gracefully (unknown keys are ignored) where typed
-    config objects would break the build.
+    Kept as a dict on purpose. Across xberg releases field names have churned; a
+    dict degrades gracefully (unknown keys are ignored) where typed config
+    objects would break the build.
     """
-    return {
+    cfg = {
         "use_cache": False,
         "images": {
             "extract_images": True,
-            "run_ocr_on_images": False,   # no per-image OCR — the VLM lane owns visuals
             "inject_placeholders": True,  # keep image anchors in the markdown for later weaving
         },
         "pdf_options": {"extract_images": True},
-        # OCR disabled entirely in Phase 0: no page-level OCR, no VLM.
-        "ocr": {"enabled": False},
     }
+    apply_ocr_to_config(cfg, options)   # images.run_ocr_on_images + ocr.* (off unless ocr_images)
+    return cfg
 
 
 def _to_bytes(img) -> bytes:
@@ -82,6 +81,7 @@ def _to_visual(img) -> VisualItem | None:
         height=getattr(img, "height", None),
         bbox=_to_bbox(img),
         cluster_id=getattr(img, "cluster_id", None),
+        ocr_text=extract_ocr_text(getattr(img, "ocr_result", None)),
     )
 
 
@@ -95,7 +95,9 @@ class XbergAdapter:
         # route specific mimes/languages elsewhere before falling back to here.
         return True
 
-    async def parse(self, data: bytes, mime: str, filename: str | None = None) -> ParseResult:
+    async def parse(
+        self, data: bytes, mime: str, filename: str | None = None, options: ParseOptions | None = None
+    ) -> ParseResult:
         # Feed the bytes straight into xberg — no temp file. A weak/oct-stream
         # mime is dropped so xberg falls back to filename-based detection.
         mime_hint = mime if mime and mime != "application/octet-stream" else None
@@ -106,7 +108,7 @@ class XbergAdapter:
             filename=filename,
         )
         try:
-            result = await xberg.extract(inp, _fast_parse_config())
+            result = await xberg.extract(inp, _fast_parse_config(options))
         except Exception as exc:  # normalize engine errors to our type
             raise ParseError(f"xberg extraction failed: {exc}") from exc
 

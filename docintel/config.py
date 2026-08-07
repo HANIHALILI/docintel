@@ -21,6 +21,10 @@ class Settings:
     # --- parser backend ---
     parser_backend: str = "inprocess"        # "inprocess" (xberg wheel) | "http" (xberg container)
     xberg_url: str | None = None             # required for http backend, e.g. http://xberg:8000
+    # --- image processing mode: describe images (VLM) or read text in them (OCR) ---
+    image_mode: str = "vlm"                  # "vlm" | "ocr"
+    ocr_backend: str = "tesseract"           # "tesseract" | "paddle-ocr"
+    ocr_language: str = "eng"                # e.g. "eng", "heb+eng"
     # --- VLM endpoint (OpenAI-compatible) ---
     vlm_model: str = "openai/gpt-4o-mini"
     vlm_base_url: str | None = None          # e.g. http://mock-vlm:9090/v1
@@ -44,6 +48,9 @@ class Settings:
         return cls(
             parser_backend=os.environ.get("PARSER_BACKEND", d.parser_backend),
             xberg_url=os.environ.get("XBERG_URL") or None,
+            image_mode=os.environ.get("IMAGE_MODE", d.image_mode).lower(),
+            ocr_backend=os.environ.get("OCR_BACKEND", d.ocr_backend),
+            ocr_language=os.environ.get("OCR_LANGUAGE", d.ocr_language),
             vlm_model=os.environ.get("VLM_MODEL", d.vlm_model),
             vlm_base_url=base_url,
             vlm_api_key=api_key,

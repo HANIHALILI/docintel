@@ -65,6 +65,21 @@ curl -s -F "file=@testdata/sample_with_image.docx" http://localhost:8090/extract
 
 ---
 
+## מצב OCR — לקרוא את הטקסט שבתמונות במקום לתאר אותן
+
+כברירת מחדל תמונות נשלחות ל־VLM (תיאור). כשמדליקים `IMAGE_MODE=ocr`, כל תמונה עוברת **OCR** במקום — ה־VLM לא נקרא כלל, והטקסט שזוהה חוזר בשדה `ocr_text` (ושזור בטקסט המסמך). ה־OCR רץ בתוך container ה־xberg (Tesseract), עם עברית מובנית (ה־image שלנו מוסיף `tesseract-ocr-heb`).
+
+**גלובלי** (כל הבקשות): `IMAGE_MODE=ocr` ב־compose/`.env`.
+
+**פר־בקשה** (override): שדה טופס `image_mode`:
+```bash
+curl -s -F "file=@doc.pdf" -F "image_mode=ocr" http://localhost:8090/extract | python -m json.tool
+```
+
+שפה: `OCR_LANGUAGE=heb+eng` (ברירת המחדל ב־compose). מנוע: `OCR_BACKEND=tesseract` (או `paddle-ocr`).
+
+---
+
 ## מסלול ג' — פרודקשן
 
 משתמש ב־`docker-compose.prod.yml`: רק `xberg` + `docintel`, בלי mock, עם secrets מ־`.env`, ו־`xberg` לא חשוף החוצה.
@@ -100,6 +115,9 @@ curl -s -F "file=@testdata/sample_with_image.docx" http://localhost:8090/extract
 |---|---|---|
 | `PARSER_BACKEND` | `inprocess` | `http` (container) או `inprocess` (wheel) |
 | `XBERG_URL` | — | חובה ל־http, למשל `http://xberg:8000` |
+| `IMAGE_MODE` | `vlm` | `vlm` (תיאור תמונות) או `ocr` (קריאת הטקסט שבהן) |
+| `OCR_BACKEND` | `tesseract` | `tesseract` או `paddle-ocr` (רק במצב ocr) |
+| `OCR_LANGUAGE` | `eng` | שפת OCR, למשל `heb+eng` (רק במצב ocr) |
 | `VLM_MODEL` | `openai/gpt-4o-mini` | שם המודל בפורמט של הספק |
 | `VLM_BASE_URL` | — | endpoint תואם־OpenAI |
 | `VLM_API_KEY` | — | מפתח; ריק אם אין |

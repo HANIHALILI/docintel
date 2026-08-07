@@ -8,7 +8,7 @@
 # network — docintel reaches it by service name.
 services:
   xberg:
-    image: ghcr.io/xberg-io/xberg:1.0.14
+    build: ./xberg-image   # official 1.0.14 + Hebrew Tesseract data
     restart: unless-stopped
     volumes:
       - xberg-cache:/cache
@@ -22,6 +22,10 @@ services:
     environment:
       - PARSER_BACKEND=http
       - XBERG_URL=http://xberg:8000
+      # --- image processing mode ---
+      - IMAGE_MODE=${IMAGE_MODE:-vlm}
+      - OCR_BACKEND=${OCR_BACKEND:-tesseract}
+      - OCR_LANGUAGE=${OCR_LANGUAGE:-heb+eng}
       # --- real VLM, from .env ---
       - VLM_MODEL=${VLM_MODEL}
       - VLM_BASE_URL=${VLM_BASE_URL}
