@@ -71,12 +71,20 @@ curl -s -F "file=@testdata/sample_with_image.docx" http://localhost:8090/extract
 
 **גלובלי** (כל הבקשות): `IMAGE_MODE=ocr` ב־compose/`.env`.
 
-**פר־בקשה** (override): שדה טופס `image_mode`:
+**פר־בקשה** (override): שדות טופס `image_mode` ו־`ocr_language`:
 ```bash
+# מצב OCR עם ברירת המחדל של השרת לשפה (heb+eng)
 curl -s -F "file=@doc.pdf" -F "image_mode=ocr" http://localhost:8090/extract | python -m json.tool
+
+# override של השפה רק לבקשה הזו — ערבית
+curl -s -F "file=@arabic.pdf" -F "image_mode=ocr" -F "ocr_language=ara" http://localhost:8090/extract | python -m json.tool
 ```
 
-שפה: `OCR_LANGUAGE=heb+eng` (ברירת המחדל ב־compose). מנוע: `OCR_BACKEND=tesseract` (או `paddle-ocr`).
+התשובה מחזירה `"image_mode"` ו־`"ocr_language"` בפועל, וכל תמונה נושאת `ocr_text`.
+
+**שפה** (`OCR_LANGUAGE` / `ocr_language`): פורמט Tesseract, מופרד ב־`+` — `eng`, `heb`, `heb+eng`, `heb+eng+ara`. **חייבת להיות מותקנת ב־image.** לרשימה: `docker compose exec xberg tesseract --list-langs`. להוספת שפה — עוד `tesseract-ocr-<lang>` ב־`xberg-image/Dockerfile` ואז `docker compose build xberg`.
+
+**מנוע** (`OCR_BACKEND`): `tesseract` (ברירת מחדל) או `paddle-ocr`.
 
 ---
 
